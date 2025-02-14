@@ -7,7 +7,7 @@ document.addEventListener("DOMContentLoaded", function () {
   let selectedTags = new Set(); // To keep track of selected tags
 
   // Fetch JSON data
-  fetch("./travel_recommendation_api.json") // Replace with actual file path
+  fetch("travel_recommendation_api.json") // Replace with actual file path
     .then((response) => response.json())
     .then((data) => {
       jsonData = data;
