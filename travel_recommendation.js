@@ -191,7 +191,7 @@ document.addEventListener("DOMContentLoaded", function () {
       let allPosts = [
         ...jsonData.beaches,
         ...jsonData.temples,
-        ...jsonData.countries.flatMap((country) => country.cities),
+        ...jsonData.countries,
       ];
       displayPosts(allPosts);
     } else {
