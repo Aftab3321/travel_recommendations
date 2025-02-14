@@ -7,7 +7,7 @@ document.addEventListener("DOMContentLoaded", function () {
   let selectedTags = new Set(); // To keep track of selected tags
 
   // Fetch JSON data
-  fetch("travel_recommendation_api.json") // Replace with actual file path
+  fetch("./travel_recommendation_api.json") // Replace with actual file path
     .then((response) => response.json())
     .then((data) => {
       jsonData = data;
@@ -25,31 +25,75 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     let results = searchInJSON(query, jsonData);
-    console.log(results);
+    // console.log(results);
 
-    if (
-      results["countries"].length > 0 ||
-      results["beaches"].length > 0 ||
-      results["temples"].length > 0
-    ) {
-      for (const items in results) {
-        results[items].forEach((item, index) => {
-          const card = document.createElement("div");
-          card.classList.add("city-card");
+if (
+  results["countries"].length > 0 ||
+  results["beaches"].length > 0 ||
+  results["temples"].length > 0
+) {
+  dropdownResults.innerHTML = ""; // Clear previous results
 
-          card.innerHTML = `
-                <img src="${item.imageUrl}" alt="${item.name}">
-                <div class="city-info">
-                    <h5>${item.name}</h5>
-                    <p>${item.description}</p>
-                    <a href="#" data-id="${items + "_" + item.id}" class="btn btn-success btn-sm visitButton">Visit</a>
-                </div>
+  for (const category in results) {
+    results[category].forEach((item) => {
+        console.log(item);
+      // Handle countries separately since they contain cities
+      if (category === "countries") {
+        // Display the country itself
+        const countryCard = document.createElement("div");
+        countryCard.classList.add("city-card");
+
+        item.cities.forEach(city => {
+            countryCard.innerHTML = `
+              <img src="${city.imageUrl}" alt="${city.name}">
+              <div class="city-info">
+                <h5>${city.name}</h5>
+                <p>${city.description}.</p>
+                <a href="#" data-id="${item.name + "_" + item.id}" class="btn btn-success btn-sm visitButton">Visit</a>
+              </div>
             `;
+    
+            dropdownResults.appendChild(countryCard);
+        })
 
-          dropdownResults.appendChild(card);
+
+        // Display all cities inside the country
+        item.cities.forEach((city) => {
+          const cityCard = document.createElement("div");
+          cityCard.classList.add("city-card");
+
+          cityCard.innerHTML = `
+            <img src="${city.imageUrl}" alt="${city.name}">
+            <div class="city-info">
+              <h5>${city.name} (City in ${item.name})</h5>
+              <p>${city.description || "A beautiful city in " + item.name}.</p>
+              <a href="#" data-id="city_${city.id}" class="btn btn-success btn-sm visitButton">Visit</a>
+            </div>
+          `;
+
+          dropdownResults.appendChild(cityCard);
         });
+      } else {
+        // Handle beaches & temples normally
+        const card = document.createElement("div");
+        card.classList.add("city-card");
+
+        card.innerHTML = `
+          <img src="${item.imageUrl}" alt="${item.name}">
+          <div class="city-info">
+            <h5>${item.name}</h5>
+            <p>${item.description}</p>
+            <a href="#" data-id="${category + "_" + item.id}" class="btn btn-success btn-sm visitButton">Visit</a>
+          </div>
+        `;
+
+        dropdownResults.appendChild(card);
       }
-      dropdownResults.classList.add("show");
+    });
+  }
+
+  dropdownResults.classList.add("show");
+
 
     //   results.forEach((item) => {
     //     let listItem = document.createElement("a");
@@ -72,48 +116,49 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function searchInJSON(query, data) {
     query = query.toLowerCase().trim();
-
-    // let results = {
-    //     countries: [],
-    //     temples: [],
-    //     beaches: []
-    // };
+  
     let results = {
       countries: [],
       temples: [],
-      beaches: [],
+      beaches: []
     };
-
+  
     // Search in countries and cities
     for (const country of data.countries || []) {
       if (country.name.toLowerCase().includes(query)) {
-        // If country matches, add its cities (not country name)
-        results.countries.push(...country.cities);
+        // If country matches, push full country object
+        results.countries.push(country);
       } else {
+        // If searching for a city, only add that specific city, not the whole country
         for (const city of country.cities) {
           if (city.name.toLowerCase().includes(query)) {
-            results.countries.push(city); // Store full city object
+            results.countries.push({
+              ...country,  // Keep country info
+              cities: [city] // Only include the matching city
+            });
           }
         }
       }
     }
-
+  
     // Search in temples
     for (const temple of data.temples || []) {
       if (temple.name.toLowerCase().includes(query)) {
-        results.temples.push(temple); // Store full temple object
+        results.temples.push(temple);
       }
     }
-
+  
     // Search in beaches
     for (const beach of data.beaches || []) {
       if (beach.name.toLowerCase().includes(query)) {
-        results.beaches.push(beach); // Store full beach object
+        results.beaches.push(beach);
       }
     }
-
+  
     return results;
   }
+  
+
 
   // Function to add tag
   function addTag(tagName) {
@@ -155,6 +200,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const postsContainer = document.querySelector("#posts .container");
 
   function displayPosts(posts) {
+    // console.log(posts);
     postsContainer.innerHTML = ""; // Clear previous content
 
     if (posts.length === 0) {
@@ -191,7 +237,7 @@ document.addEventListener("DOMContentLoaded", function () {
       let allPosts = [
         ...jsonData.beaches,
         ...jsonData.temples,
-        ...jsonData.countries,
+        ...jsonData.countries.flatMap((country) => country.cities),
       ];
       displayPosts(allPosts);
     } else {
@@ -200,9 +246,15 @@ document.addEventListener("DOMContentLoaded", function () {
       selectedTags.forEach((tag) => {
         if (jsonData[tag]) {
           filteredPosts.push(...jsonData[tag]);
+        } else {
+            jsonData['countries'].forEach(item => {
+                if (item.name == tag) {
+                    filteredPosts.push(...item.cities);
+                }
+            })
         }
       });
-
+      console.log(filteredPosts);
       displayPosts(filteredPosts);
     }
   }
